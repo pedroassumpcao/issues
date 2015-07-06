@@ -1,9 +1,12 @@
 defmodule Issues.GithubIssues do
 
+  require Logger
+
   @user_agent  [{"User-agent", "Pedro Assumpcao pedro.assumpcao@gmail.com"}]
   @github_url Application.get_env(:issues, :github_url)
 
   def fetch(user, project) do
+    Logger.info "Fetching user #{user}'s project #{project}"
     issues_url(user, project)
     |> HTTPoison.get(@user_agent)
     |> handle_response
@@ -16,10 +19,13 @@ defmodule Issues.GithubIssues do
   def handle_response(response) do
     case response do
       {:ok, %HTTPoison.Response{status_code: 200, body: body}} ->
+        Logger.info "Successful response"
+        Logger.debug fn -> inspect(body) end
         {:ok, :jsx.decode(body)}
       {:ok, %HTTPoison.Response{status_code: 404}} ->
-        {:ok, "Not found :("}
+        {:error, :jsx.decode("{\"message\": \"Not Found\"}")}
       {:error, %HTTPoison.Error{reason: reason}} ->
+        Logger.error "Error #{reason} returned"
         {:error, :jsx.decode(reason)}
     end
   end
